@@ -16,6 +16,8 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 signalwire = "0.1.1"
+dotenv = "0.15.0"
+tokio = { version = "1.42.0", features = ["full"] }
 ```
 
 or install with cargo, in the root of your project:
