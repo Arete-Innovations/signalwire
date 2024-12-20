@@ -1,0 +1,32 @@
+# Ignore compiled files
+/target/
+**/*.rs.bk
+
+# Ignore bloated editor files 
+/.vscode/
+/.idea/
+/*.iml
+
+# Ignore build artifacts
+/target/
+/Cargo.lock
+
+# Ignore environment files
+.env
+
+# Ignore SoyDev files 
+.DS_Store
+
+# Ignore temporary files
+*.swp
+*.swo
+
+# Ignore test results
+/tests/results/
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore coverage reports
+coverage/
