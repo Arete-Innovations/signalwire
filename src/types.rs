@@ -1,18 +1,9 @@
-use reqwest::Client as HttpClient;
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct JwtResponse {
     pub jwt_token: String,
     pub refresh_token: String,
-}
-
-#[derive(Debug)]
-pub struct Client {
-    pub project_id: String,
-    pub api_key: String,
-    pub space_name: String,
-    pub http_client: HttpClient,
 }
 
 #[derive(Default)]

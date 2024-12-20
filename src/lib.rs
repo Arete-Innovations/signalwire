@@ -4,6 +4,7 @@ pub mod types;
 
 #[cfg(test)]
 mod tests {
+    use crate::client::*;
     use crate::errors::*;
     use crate::types::*;
     use dotenv::dotenv;

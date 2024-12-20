@@ -3,6 +3,14 @@ use crate::types::*;
 use reqwest::Client as HttpClient;
 use reqwest::Url;
 
+#[derive(Debug)]
+pub struct Client {
+    pub project_id: String,
+    pub api_key: String,
+    pub space_name: String,
+    pub http_client: HttpClient,
+}
+
 impl Client {
     /// Creates a new SignalWire client.
     ///

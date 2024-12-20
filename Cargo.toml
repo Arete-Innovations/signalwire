@@ -1,6 +1,6 @@
 [package]
 name = "signalwire"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Zmole Cristian <chiarel@tragdate.ninja>"]
 description = "The unofficial SignalWire SDK for Rust."
