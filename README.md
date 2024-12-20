@@ -15,7 +15,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-signalwire = "0.1.0"
+signalwire = "0.1.1"
 ```
 
 or install with cargo, in the root of your project:
