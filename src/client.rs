@@ -71,6 +71,25 @@ impl Client {
         Ok(jwt_response)
     }
 
+    /// Blocking version of `get_jwt`.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `JwtResponse` with `jwt_token` and `refresh_token` if successful.
+    /// - `SignalWireError` if the request fails or is unauthorized.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `get_jwt`.")]
+    #[cfg(feature = "blocking")]
+    pub fn get_jwt_blocking(&self) -> Result<JwtResponse, SignalWireError> {
+        tokio::runtime::Runtime::new().unwrap().block_on(self.get_jwt())
+    }
+
     /// Fetches available phone numbers for a given country.
     /// Currently the only country supported by SignalWire is "US".
     ///
@@ -109,6 +128,25 @@ impl Client {
         let phone_numbers_response: AvailablePhoneNumbersResponse = serde_json::from_str(&response_text).map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
 
         Ok(phone_numbers_response)
+    }
+
+    /// Blocking version of `get_available_phone_numbers`.
+    ///
+    /// # Arguments
+    ///
+    /// * `iso_country` - The ISO country code to query against.
+    /// * `query_params` - Additional query parameters as key-value pairs.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either an `AvailablePhoneNumbersResponse` or a `SignalWireError`.
+
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `get_available_phone_numbers`.")]
+    #[cfg(feature = "blocking")]
+    pub fn get_available_phone_numbers_blocking(&self, iso_country: &str, query_params: &[(String, String)]) -> Result<AvailablePhoneNumbersResponse, SignalWireError> {
+        tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(self.get_available_phone_numbers(iso_country, query_params))
     }
 
     /// Retrieves a list of phone numbers owned by the client.
@@ -152,5 +190,27 @@ impl Client {
 
             Ok(phone_numbers_response)
         }
+    }
+
+    /// Blocking version of `get_owned_phone_numbers`.
+    ///
+    /// # Arguments
+    ///
+    /// * `query_params` - Additional query parameters as key-value pairs.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `OwnedPhoneNumbers` with detailed phone number info if successful.
+    /// - `SignalWireError` if the request fails or is unauthorized.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `get_owned_phone_numbers`.")]
+    #[cfg(feature = "blocking")]
+    pub fn get_owned_phone_numbers_blocking(&self, query_params: &[(String, String)]) -> Result<OwnedPhoneNumbers, SignalWireError> {
+        tokio::runtime::Runtime::new().unwrap().block_on(self.get_owned_phone_numbers(query_params))
     }
 }

@@ -8,6 +8,7 @@ This library currently provides methods for authentication and managing phone nu
 - 🔐  **Authenticate**: Obtain JWT tokens for secure API access.
 - 📞  **Phone Number Management**: Retrieve available and owned phone numbers.
 - ⚡ **Asynchronous Support**: Built with async/await using Tokio.
+- 🕛 **Blocking Support**: Support for synchronous operations.
 
 ## 📦 Installation
 
@@ -15,7 +16,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-signalwire = "0.1.1"
+signalwire = "0.1.2"
 dotenv = "0.15.0"
 tokio = { version = "1.42.0", features = ["full"] }
 ```
@@ -24,6 +25,17 @@ or install with cargo, in the root of your project:
 
 ```bash
 cargo add signalwire
+```
+
+or you can request the blocking version:
+
+```toml
+[dependencies]
+signalwire = { version = "0.1.2", features = ["blocking"] }
+```
+
+```bash
+cargo add signalwire --features=blocking
 ```
 
 ## ⚙️ Configuration
@@ -36,7 +48,7 @@ SIGNALWIRE_PROJECT_ID=your_project_id
 SIGNALWIRE_API_KEY=your_api_key
 ```
 
-## 📚 Usage
+## 📚 Usage ( Async )
 
 ### Initialize the Client
 
