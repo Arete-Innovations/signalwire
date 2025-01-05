@@ -10,14 +10,14 @@ mod tests {
     use dotenv::dotenv;
     use std::env;
 
-    fn get_client_from_env() -> Client {
+    fn get_client_from_env() -> SignalWireClient {
         dotenv().ok();
 
         let space_name = env::var("SIGNALWIRE_SPACE_NAME").expect("Missing space name");
         let project_id = env::var("SIGNALWIRE_PROJECT_ID").expect("Missing project ID");
         let api_key = env::var("SIGNALWIRE_API_KEY").expect("Missing API key");
 
-        Client::new(&space_name, &project_id, &api_key)
+        SignalWireClient::new(&space_name, &project_id, &api_key)
     }
 
     #[tokio::test]
@@ -38,13 +38,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_available_phone_numbers() {
+    async fn test_get_phone_numbers_available() {
         let client = get_client_from_env();
-        let query_params = AvailablePhoneNumberQueryParams::new().build();
+        let query_params = PhoneNumberAvailableQueryParams::new().build();
 
-        match client.get_available_phone_numbers("US", &query_params).await {
+        match client.get_phone_numbers_available("US", &query_params).await {
             Ok(response) => {
-                assert!(!response.available_phone_numbers.is_empty(), "Expected non-empty phone numbers list");
+                assert!(!response.phone_numbers_available.is_empty(), "Expected non-empty phone numbers list");
             }
             Err(e) => {
                 eprintln!("Error: {:?}", e);
@@ -54,11 +54,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_owned_phone_numbers() {
+    async fn test_get_phone_numbers_owned() {
         let client = get_client_from_env();
-        let query_params = OwnedPhoneNumberFilterParams::new().build();
+        let query_params = PhoneNumberOwnedFilterParams::new().build();
 
-        let result = client.get_owned_phone_numbers(&query_params).await;
+        let result = client.get_phone_numbers_owned(&query_params).await;
 
         match result {
             Ok(phone_numbers) => {

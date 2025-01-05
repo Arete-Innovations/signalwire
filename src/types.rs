@@ -7,11 +7,11 @@ pub struct JwtResponse {
 }
 
 #[derive(Default)]
-pub struct AvailablePhoneNumberQueryParams {
+pub struct PhoneNumberAvailableQueryParams {
     params: Vec<(String, String)>,
 }
 
-impl AvailablePhoneNumberQueryParams {
+impl PhoneNumberAvailableQueryParams {
     pub fn new() -> Self {
         Self::default()
     }
@@ -77,13 +77,14 @@ impl AvailablePhoneNumberQueryParams {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct AvailablePhoneNumbersResponse {
+pub struct PhoneNumbersAvailableResponse {
     pub uri: String,
-    pub available_phone_numbers: Vec<AvailablePhoneNumber>,
+    #[serde(rename = "available_phone_numbers")]
+    pub phone_numbers_available: Vec<PhoneNumberAvailable>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct AvailablePhoneNumber {
+pub struct PhoneNumberAvailable {
     pub beta: bool,
     pub capabilities: Capabilities,
     pub friendly_name: String,
@@ -108,11 +109,11 @@ pub struct Capabilities {
 }
 
 #[derive(Default)]
-pub struct OwnedPhoneNumberFilterParams {
+pub struct PhoneNumberOwnedFilterParams {
     params: Vec<(String, String)>,
 }
 
-impl OwnedPhoneNumberFilterParams {
+impl PhoneNumberOwnedFilterParams {
     pub fn new() -> Self {
         Self::default()
     }
@@ -133,7 +134,7 @@ impl OwnedPhoneNumberFilterParams {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct OwnedPhoneNumbers {
+pub struct PhoneNumbersOwnedResponse {
     pub links: Links,
     pub data: Vec<Daum>,
 }
@@ -151,7 +152,7 @@ pub struct Links {
 pub struct Daum {
     pub id: String,
     pub number: String,
-    pub name: String,
+    pub name: Option<String>,
     pub call_handler: Option<String>,
     pub call_receive_mode: Option<String>,
     pub call_request_url: Option<String>,

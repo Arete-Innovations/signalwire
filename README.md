@@ -16,7 +16,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-signalwire = "0.1.2"
+signalwire = "0.1.4"
 dotenv = "0.15.0"
 tokio = { version = "1.42.0", features = ["full"] }
 ```
@@ -31,7 +31,7 @@ or you can request the blocking version:
 
 ```toml
 [dependencies]
-signalwire = { version = "0.1.2", features = ["blocking"] }
+signalwire = { version = "0.1.4", features = ["blocking"] }
 ```
 
 ```bash
@@ -53,7 +53,7 @@ SIGNALWIRE_API_KEY=your_api_key
 ### Initialize the Client
 
 ```rust
-use signalwire::{client::Client, errors::SignalWireError};
+use signalwire::{client::SignalWireClient, errors::SignalWireError};
 use dotenv::dotenv;
 use std::env;
 
@@ -65,7 +65,7 @@ async fn main() -> Result<(), SignalWireError> {
     let project_id = env::var("SIGNALWIRE_PROJECT_ID").expect("Missing project ID");
     let api_key = env::var("SIGNALWIRE_API_KEY").expect("Missing API key");
 
-    let client = Client::new(&space_name, &project_id, &api_key);
+    let client = SignalWireClient::new(&space_name, &project_id, &api_key);
 
     // Example: Get JWT
     let jwt_response = client.get_jwt().await?;
@@ -78,15 +78,18 @@ async fn main() -> Result<(), SignalWireError> {
 ### Get Available Phone Numbers
 
 ```rust
-let query_params = vec![("AreaCode".to_string(), "212".to_string())];
-let available_numbers = client.get_available_phone_numbers("US", &query_params).await?;
+let client = SignalWireClient::new(&space_name, &project_id, &api_key);
+let query_params = PhoneNumberAvailableQueryParams::new().build();
+let available_numbers = client.get_phone_numbers_available("US", &query_params).await?;
 println!("Available numbers: {:?}", available_numbers);
 ```
 
 ### Get Owned Phone Numbers
 
 ```rust
-let owned_numbers = client.get_owned_phone_numbers(&[]).await?;
+let client = SignalWireClient::new(&space_name, &project_id, &api_key);
+let query_params = PhoneNumberOwnedFilterParams::new().build();
+let owned_numbers = client.get_phone_numbers_owned(&query_params).await?;
 println!("Owned numbers: {:?}", owned_numbers);
 ```
 

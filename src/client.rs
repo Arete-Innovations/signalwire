@@ -4,14 +4,14 @@ use reqwest::Client as HttpClient;
 use reqwest::Url;
 
 #[derive(Debug)]
-pub struct Client {
+pub struct SignalWireClient {
     pub project_id: String,
     pub api_key: String,
     pub space_name: String,
     pub http_client: HttpClient,
 }
 
-impl Client {
+impl SignalWireClient {
     /// Creates a new SignalWire client.
     ///
     /// # Arguments
@@ -22,9 +22,9 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// A new instance of `Client`.
+    /// A new instance of `SignalWireClient`.
     pub fn new(space_name: &str, project_id: &str, api_key: &str) -> Self {
-        Client {
+        SignalWireClient {
             space_name: space_name.to_string(),
             project_id: project_id.to_string(),
             api_key: api_key.to_string(),
@@ -100,8 +100,8 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// A `Result` containing either an `AvailablePhoneNumbersResponse` or a `SignalWireError`.
-    pub async fn get_available_phone_numbers(&self, iso_country: &str, query_params: &[(String, String)]) -> Result<AvailablePhoneNumbersResponse, SignalWireError> {
+    /// A `Result` containing either an `PhoneNumbersAvailableResponse` or a `SignalWireError`.
+    pub async fn get_phone_numbers_available(&self, iso_country: &str, query_params: &[(String, String)]) -> Result<PhoneNumbersAvailableResponse, SignalWireError> {
         let url = format!(
             "https://{}.signalwire.com/api/laml/2010-04-01/Accounts/{}/AvailablePhoneNumbers/{}/Local",
             self.space_name, self.project_id, iso_country
@@ -125,12 +125,12 @@ impl Client {
             return Err(SignalWireError::Unexpected(response_text));
         }
 
-        let phone_numbers_response: AvailablePhoneNumbersResponse = serde_json::from_str(&response_text).map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+        let phone_numbers_response: PhoneNumbersAvailableResponse = serde_json::from_str(&response_text).map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
 
         Ok(phone_numbers_response)
     }
 
-    /// Blocking version of `get_available_phone_numbers`.
+    /// Blocking version of `get_phone_numbers_available`.
     ///
     /// # Arguments
     ///
@@ -139,14 +139,14 @@ impl Client {
     ///
     /// # Returns
     ///
-    /// A `Result` containing either an `AvailablePhoneNumbersResponse` or a `SignalWireError`.
+    /// A `Result` containing either an `PhoneNumbersAvailableResponse` or a `SignalWireError`.
 
-    #[cfg_attr(feature = "blocking", doc = "Blocking version of `get_available_phone_numbers`.")]
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `get_phone_numbers_available`.")]
     #[cfg(feature = "blocking")]
-    pub fn get_available_phone_numbers_blocking(&self, iso_country: &str, query_params: &[(String, String)]) -> Result<AvailablePhoneNumbersResponse, SignalWireError> {
+    pub fn get_phone_numbers_available_blocking(&self, iso_country: &str, query_params: &[(String, String)]) -> Result<PhoneNumbersAvailableResponse, SignalWireError> {
         tokio::runtime::Runtime::new()
             .unwrap()
-            .block_on(self.get_available_phone_numbers(iso_country, query_params))
+            .block_on(self.get_phone_numbers_available(iso_country, query_params))
     }
 
     /// Retrieves a list of phone numbers owned by the client.
@@ -158,14 +158,14 @@ impl Client {
     /// # Returns
     ///
     /// A `Result` containing either:
-    /// - `OwnedPhoneNumbers` with detailed phone number info if successful.
+    /// - `PhoneNumbersOwnedResponse` with detailed phone number info if successful.
     /// - `SignalWireError` if the request fails or is unauthorized.
     ///
     /// # Errors
     ///
     /// Returns `SignalWireError::Unauthorized` if authentication fails.
     /// Other `SignalWireError` variants may be returned for unexpected issues.
-    pub async fn get_owned_phone_numbers(&self, query_params: &[(String, String)]) -> Result<OwnedPhoneNumbers, SignalWireError> {
+    pub async fn get_phone_numbers_owned(&self, query_params: &[(String, String)]) -> Result<PhoneNumbersOwnedResponse, SignalWireError> {
         let url = format!("https://{}.signalwire.com/api/relay/rest/phone_numbers", self.space_name);
 
         let url = Url::parse_with_params(&url, query_params).map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
@@ -186,13 +186,13 @@ impl Client {
         } else if status.is_client_error() || status.is_server_error() {
             return Err(SignalWireError::Unexpected(response_text));
         } else {
-            let phone_numbers_response: OwnedPhoneNumbers = serde_json::from_str(&response_text).map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+            let phone_numbers_response: PhoneNumbersOwnedResponse = serde_json::from_str(&response_text).map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
 
             Ok(phone_numbers_response)
         }
     }
 
-    /// Blocking version of `get_owned_phone_numbers`.
+    /// Blocking version of `get_phone_numbers_owned`.
     ///
     /// # Arguments
     ///
@@ -201,16 +201,16 @@ impl Client {
     /// # Returns
     ///
     /// A `Result` containing either:
-    /// - `OwnedPhoneNumbers` with detailed phone number info if successful.
+    /// - `OwnedPhoneNumbersResponse` with detailed phone number info if successful.
     /// - `SignalWireError` if the request fails or is unauthorized.
     ///
     /// # Errors
     ///
     /// Returns `SignalWireError::Unauthorized` if authentication fails.
     /// Other `SignalWireError` variants may be returned for unexpected issues.
-    #[cfg_attr(feature = "blocking", doc = "Blocking version of `get_owned_phone_numbers`.")]
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `get_phone_numbers_owned`.")]
     #[cfg(feature = "blocking")]
-    pub fn get_owned_phone_numbers_blocking(&self, query_params: &[(String, String)]) -> Result<OwnedPhoneNumbers, SignalWireError> {
-        tokio::runtime::Runtime::new().unwrap().block_on(self.get_owned_phone_numbers(query_params))
+    pub fn get_phone_numbers_owned_blocking(&self, query_params: &[(String, String)]) -> Result<PhoneNumbersOwnedResponse, SignalWireError> {
+        tokio::runtime::Runtime::new().unwrap().block_on(self.get_phone_numbers_owned(query_params))
     }
 }
