@@ -188,3 +188,49 @@ pub struct Daum {
     pub updated_at: Option<String>,
     pub next_billed_at: Option<String>,
 }
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BuyPhoneNumberRequest {
+    pub number: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BuyPhoneNumberResponse {
+    pub id: String,
+    pub number: String,
+    pub name: Option<String>,
+    pub call_handler: Option<String>,
+    pub call_receive_mode: Option<String>,
+    pub call_request_url: Option<String>,
+    pub call_request_method: Option<String>,
+    pub call_fallback_url: Option<String>,
+    pub call_fallback_method: Option<String>,
+    pub call_status_callback_url: Option<String>,
+    pub call_status_callback_method: Option<String>,
+    pub call_laml_application_id: Option<String>,
+    pub call_dialogflow_agent_id: Option<String>,
+    pub call_relay_topic: Option<String>,
+    pub call_relay_topic_status_callback_url: Option<String>,
+    pub call_relay_context: Option<String>,
+    pub call_relay_context_status_callback_url: Option<String>,
+    pub call_relay_application: Option<String>,
+    pub call_relay_connector_id: Option<String>,
+    pub call_sip_endpoint_id: Option<String>,
+    pub call_verto_resource: Option<String>,
+    pub call_video_room_id: Option<String>,
+    pub message_handler: Option<String>,
+    pub message_request_url: Option<String>,
+    pub message_request_method: Option<String>,
+    pub message_fallback_url: Option<String>,
+    pub message_fallback_method: Option<String>,
+    pub message_laml_application_id: Option<String>,
+    pub message_relay_topic: Option<String>,
+    pub message_relay_context: Option<String>,
+    pub message_relay_application: Option<String>,
+    pub capabilities: Vec<String>,
+    pub number_type: Option<String>,
+    pub e911_address_id: Option<String>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+    pub next_billed_at: Option<String>,
+}

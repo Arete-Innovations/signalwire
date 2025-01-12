@@ -213,4 +213,70 @@ impl SignalWireClient {
     pub fn get_phone_numbers_owned_blocking(&self, query_params: &[(String, String)]) -> Result<PhoneNumbersOwnedResponse, SignalWireError> {
         tokio::runtime::Runtime::new().unwrap().block_on(self.get_phone_numbers_owned(query_params))
     }
+
+    /// Buy a phone number.
+    ///
+    /// # Arguments
+    ///
+    /// * `phone_number` - The phone number to buy.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `BuyPhoneNumberResponse` with detailed phone number info if successful.
+    /// - `SignalWireError` if the request fails or is unauthorized.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+
+    pub async fn buy_phone_number(&self, phone_number: &str) -> Result<BuyPhoneNumberResponse, SignalWireError> {
+        let url = format!("https://{}.signalwire.com/api/relay/rest/phone_numbers", self.space_name);
+
+        let response = self
+            .http_client
+            .post(&url)
+            .basic_auth(&self.project_id, Some(&self.api_key))
+            .json(&BuyPhoneNumberRequest {
+                number: phone_number.to_string(),
+            })
+            .send()
+            .await
+            .map_err(|e| SignalWireError::HttpError(e.to_string()))?;
+
+        let status = response.status();
+        let response_text = response.text().await.map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+
+        if status.is_client_error() || status.is_server_error() {
+            return Err(SignalWireError::Unexpected(response_text));
+        }
+
+        let buy_phone_number_response: BuyPhoneNumberResponse = serde_json::from_str(&response_text).map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+
+        Ok(buy_phone_number_response)
+    }
+
+    /// Blocking version of `buy_phone_number`.
+    ///
+    /// # Arguments
+    ///
+    /// * `phone_number` - The phone number to buy.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `BuyPhoneNumberResponse` with detailed phone number info if successful.
+    /// - `SignalWireError` if the request fails or is unauthorized.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `buy_phone_number`.")]
+    #[cfg(feature = "blocking")]
+    pub fn buy_phone_number_blocking(&self, phone_number: &str) -> Result<BuyPhoneNumberResponse, SignalWireError> {
+        tokio::runtime::Runtime::new().unwrap().block_on(self.buy_phone_number(phone_number))
+    }
 }

@@ -16,7 +16,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-signalwire = "0.1.4"
+signalwire = "0.1.5"
 dotenv = "0.15.0"
 tokio = { version = "1.42.0", features = ["full"] }
 ```
@@ -31,7 +31,7 @@ or you can request the blocking version:
 
 ```toml
 [dependencies]
-signalwire = { version = "0.1.4", features = ["blocking"] }
+signalwire = { version = "0.1.5", features = ["blocking"] }
 ```
 
 ```bash
