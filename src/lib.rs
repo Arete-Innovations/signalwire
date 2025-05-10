@@ -72,4 +72,56 @@ mod tests {
             }
         }
     }
+
+    /// Test for SMS sending functionality.
+    ///
+    /// This test is disabled by default to prevent accidental SMS charges.
+    /// To run this test, set the following environment variables in your .env file:
+    ///
+    /// SIGNALWIRE_RUN_SMS_TEST=true
+    /// SIGNALWIRE_FROM_NUMBER=+15551234567 (a number you own in SignalWire)
+    /// SIGNALWIRE_TO_NUMBER=+15557654321 (the recipient's number)
+    ///
+    /// Then run: cargo test test_send_sms -- --nocapture
+    #[tokio::test]
+    async fn test_send_sms() {
+        dotenv().ok();
+
+        if env::var("SIGNALWIRE_RUN_SMS_TEST").unwrap_or_else(|_| "false".to_string()) != "true" {
+            println!("Skipping SMS test. To enable, set the following in your .env file:");
+            println!("SIGNALWIRE_RUN_SMS_TEST=true");
+            println!("SIGNALWIRE_FROM_NUMBER=+15551234567");
+            println!("SIGNALWIRE_TO_NUMBER=+15557654321");
+            return;
+        }
+
+        let client = get_client_from_env();
+
+        let from_number = env::var("SIGNALWIRE_FROM_NUMBER").expect("Missing SIGNALWIRE_FROM_NUMBER env var");
+        let to_number = env::var("SIGNALWIRE_TO_NUMBER").expect("Missing SIGNALWIRE_TO_NUMBER env var");
+
+        println!("Sending SMS from {} to {}", from_number, to_number);
+
+        let message = SmsMessage {
+            from: from_number,
+            to: to_number,
+            body: "This is a test message from the SignalWire Rust SDK.".to_string(),
+        };
+
+        match client.send_sms(&message).await {
+            Ok(response) => {
+                assert_eq!(response.from, message.from);
+                assert_eq!(response.to, message.to);
+                assert_eq!(response.body, message.body);
+                assert!(!response.sid.is_empty(), "Expected non-empty SID");
+                println!("✓ SMS sent successfully with SID: {}", response.sid);
+            }
+            Err(SignalWireError::Unauthorized) => {
+                println!("Error: Unauthorized - Check your credentials");
+            }
+            Err(e) => {
+                panic!("Unexpected error: {:?}", e);
+            }
+        }
+    }
 }

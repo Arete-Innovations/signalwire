@@ -279,4 +279,71 @@ impl SignalWireClient {
     pub fn buy_phone_number_blocking(&self, phone_number: &str) -> Result<BuyPhoneNumberResponse, SignalWireError> {
         tokio::runtime::Runtime::new().unwrap().block_on(self.buy_phone_number(phone_number))
     }
+
+    /// Sends an SMS message using the SignalWire API.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The SMS message details including `body`, `from`, and `to`.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `SmsResponse` with details about the sent message if successful.
+    /// - `SignalWireError` if the request fails or is unauthorized.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    pub async fn send_sms(&self, message: &SmsMessage) -> Result<SmsResponse, SignalWireError> {
+        let url = format!("https://{}.signalwire.com/api/laml/2010-04-01/Accounts/{}/Messages", self.space_name, self.project_id);
+
+        let form = [("From", &message.from), ("To", &message.to), ("Body", &message.body)];
+
+        let response = self
+            .http_client
+            .post(&url)
+            .basic_auth(&self.project_id, Some(&self.api_key))
+            .form(&form)
+            .send()
+            .await
+            .map_err(|e| SignalWireError::HttpError(e.to_string()))?;
+
+        let status = response.status();
+        let response_text = response.text().await.map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+
+        if status == reqwest::StatusCode::UNAUTHORIZED {
+            return Err(SignalWireError::Unauthorized);
+        } else if status.is_client_error() || status.is_server_error() {
+            return Err(SignalWireError::Unexpected(response_text));
+        }
+
+        let sms_response: SmsResponse =
+            serde_json::from_str(&response_text).map_err(|e| SignalWireError::Unexpected(format!("Failed to parse response: {}. Response was: {}", e, response_text)))?;
+
+        Ok(sms_response)
+    }
+
+    /// Blocking version of `send_sms`.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The SMS message details including `body`, `from`, and `to`.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `SmsResponse` with details about the sent message if successful.
+    /// - `SignalWireError` if the request fails or is unauthorized.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `send_sms`.")]
+    #[cfg(feature = "blocking")]
+    pub fn send_sms_blocking(&self, message: &SmsMessage) -> Result<SmsResponse, SignalWireError> {
+        tokio::runtime::Runtime::new().unwrap().block_on(self.send_sms(message))
+    }
 }

@@ -234,3 +234,41 @@ pub struct BuyPhoneNumberResponse {
     pub updated_at: Option<String>,
     pub next_billed_at: Option<String>,
 }
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SmsMessage {
+    pub body: String,
+    pub from: String,
+    pub to: String,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SmsResponse {
+    pub sid: String,
+    pub date_created: String,
+    pub date_updated: String,
+    pub date_sent: Option<String>,
+    pub account_sid: String,
+    pub to: String,
+    pub from: String,
+    pub messaging_service_sid: Option<String>,
+    pub body: String,
+    pub status: String,
+    pub num_segments: i32,
+    pub num_media: i32,
+    pub direction: String,
+    pub api_version: String,
+    pub price: Option<String>,
+    pub price_unit: Option<String>,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+    pub uri: String,
+    #[serde(default)]
+    pub subresource_uris: SubresourceUris,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SubresourceUris {
+    #[serde(default)]
+    pub media: String,
+}
