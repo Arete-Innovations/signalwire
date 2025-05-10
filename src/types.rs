@@ -258,7 +258,7 @@ pub struct SmsResponse {
     pub num_media: i32,
     pub direction: String,
     pub api_version: String,
-    pub price: Option<String>,
+    pub price: Option<f64>,
     pub price_unit: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
@@ -267,8 +267,62 @@ pub struct SmsResponse {
     pub subresource_uris: SubresourceUris,
 }
 
+impl SmsResponse {
+    /// Get the message status as an enum value.
+    ///
+    /// This method converts the string status field to a more
+    /// programmer-friendly enum variant.
+    ///
+    /// # Returns
+    ///
+    /// A `MessageStatus` enum representing the current status of the message.
+    pub fn get_status(&self) -> MessageStatus {
+        MessageStatus::from(self.status.as_str())
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SubresourceUris {
     #[serde(default)]
     pub media: String,
+}
+
+// Message status values according to SignalWire API
+#[derive(Debug, Clone, PartialEq)]
+pub enum MessageStatus {
+    Queued,      // The message is queued and waiting to be sent
+    Sending,     // The message is in the process of being sent
+    Sent,        // The message has been sent to the carrier
+    Delivered,   // The message has been delivered to the recipient
+    Failed,      // The message failed to be sent
+    Undelivered, // The message was sent but not delivered
+    Unknown,     // The status is unknown
+}
+
+impl From<&str> for MessageStatus {
+    fn from(status: &str) -> Self {
+        match status.to_lowercase().as_str() {
+            "queued" => MessageStatus::Queued,
+            "sending" => MessageStatus::Sending,
+            "sent" => MessageStatus::Sent,
+            "delivered" => MessageStatus::Delivered,
+            "failed" => MessageStatus::Failed,
+            "undelivered" => MessageStatus::Undelivered,
+            _ => MessageStatus::Unknown,
+        }
+    }
+}
+
+impl std::fmt::Display for MessageStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MessageStatus::Queued => write!(f, "queued"),
+            MessageStatus::Sending => write!(f, "sending"),
+            MessageStatus::Sent => write!(f, "sent"),
+            MessageStatus::Delivered => write!(f, "delivered"),
+            MessageStatus::Failed => write!(f, "failed"),
+            MessageStatus::Undelivered => write!(f, "undelivered"),
+            MessageStatus::Unknown => write!(f, "unknown"),
+        }
+    }
 }

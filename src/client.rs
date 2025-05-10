@@ -346,4 +346,78 @@ impl SignalWireClient {
     pub fn send_sms_blocking(&self, message: &SmsMessage) -> Result<SmsResponse, SignalWireError> {
         tokio::runtime::Runtime::new().unwrap().block_on(self.send_sms(message))
     }
+
+    /// Get the status of a message by its SID (message identifier).
+    ///
+    /// This method allows you to check the current delivery status of a message
+    /// that was previously sent via the SignalWire API.
+    ///
+    /// # Arguments
+    ///
+    /// * `message_sid` - The SID (unique identifier) of the message to check
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `SmsResponse` with the complete message details, including its current status
+    /// - `SignalWireError` if the request fails or the message can't be found
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Returns `SignalWireError::NotFound` if the message SID doesn't exist.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    pub async fn get_message_status(&self, message_sid: &str) -> Result<SmsResponse, SignalWireError> {
+        let url = format!(
+            "https://{}.signalwire.com/api/laml/2010-04-01/Accounts/{}/Messages/{}",
+            self.space_name, self.project_id, message_sid
+        );
+
+        let response = self
+            .http_client
+            .get(&url)
+            .basic_auth(&self.project_id, Some(&self.api_key))
+            .send()
+            .await
+            .map_err(|e| SignalWireError::HttpError(e.to_string()))?;
+
+        let status = response.status();
+        let response_text = response.text().await.map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+
+        if status == reqwest::StatusCode::UNAUTHORIZED {
+            return Err(SignalWireError::Unauthorized);
+        } else if status == reqwest::StatusCode::NOT_FOUND {
+            return Err(SignalWireError::NotFound(format!("Message with SID {} not found", message_sid)));
+        } else if status.is_client_error() || status.is_server_error() {
+            return Err(SignalWireError::Unexpected(response_text));
+        }
+
+        let sms_response: SmsResponse = serde_json::from_str(&response_text)
+            .map_err(|e| SignalWireError::Unexpected(format!("Failed to parse response: {}. Response was: {}", e, response_text)))?;
+
+        Ok(sms_response)
+    }
+
+    /// Blocking version of `get_message_status`.
+    ///
+    /// # Arguments
+    ///
+    /// * `message_sid` - The SID (unique identifier) of the message to check
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `SmsResponse` with the complete message details, including its current status
+    /// - `SignalWireError` if the request fails or the message can't be found
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Returns `SignalWireError::NotFound` if the message SID doesn't exist.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `get_message_status`.")]
+    #[cfg(feature = "blocking")]
+    pub fn get_message_status_blocking(&self, message_sid: &str) -> Result<SmsResponse, SignalWireError> {
+        tokio::runtime::Runtime::new().unwrap().block_on(self.get_message_status(message_sid))
+    }
 }
