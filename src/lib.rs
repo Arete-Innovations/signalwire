@@ -4,11 +4,11 @@ pub mod types;
 
 #[cfg(test)]
 mod tests {
-    use crate::client::*;
-    use crate::errors::*;
-    use crate::types::*;
-    use dotenv::dotenv;
     use std::env;
+
+    use dotenv::dotenv;
+
+    use crate::{client::*, errors::*, types::*};
 
     fn get_client_from_env() -> SignalWireClient {
         dotenv().ok();
@@ -133,8 +133,7 @@ mod tests {
         };
 
         // Always store the SID for follow-up tests when the SMS test is run
-        use std::fs::File;
-        use std::io::Write;
+        use std::{fs::File, io::Write};
 
         match File::create(".signalwire_test_sms_sid") {
             Ok(mut file) => {
@@ -156,11 +155,10 @@ mod tests {
             Ok(status_response) => {
                 let current_status = status_response.get_status();
                 println!("✓ Initial status check: {}", current_status);
-                println!("Message details: SID={}, From={}, To={}, Body=\"{}\"",
-                    status_response.sid,
-                    status_response.from,
-                    status_response.to,
-                    status_response.body);
+                println!(
+                    "Message details: SID={}, From={}, To={}, Body=\"{}\"",
+                    status_response.sid, status_response.from, status_response.to, status_response.body
+                );
 
                 println!("Run the follow-up delayed status check with: cargo test test_delayed_status_check -- --nocapture");
             }
@@ -234,6 +232,176 @@ mod tests {
             }
             Err(e) => {
                 panic!("Unexpected error checking message status: {:?}", e);
+            }
+        }
+    }
+
+    // ---------- Subproject Tests ----------
+
+    /// Test listing subprojects.
+    ///
+    /// This test retrieves the list of subprojects in your SignalWire account.
+    #[tokio::test]
+    async fn test_list_subprojects() {
+        let client = get_client_from_env();
+        let query_params = SubprojectQueryParams::new().build();
+
+        match client.list_subprojects(&query_params).await {
+            Ok(response) => {
+                // Should contain at least one account (the main project)
+                assert!(!response.accounts.is_empty(), "Expected non-empty accounts list");
+                println!("Found {} subproject(s)", response.accounts.len());
+
+                // Print some details about each account
+                for (i, account) in response.accounts.iter().enumerate() {
+                    println!("Subproject #{}: SID={}, Name={}", i + 1, account.sid, account.friendly_name);
+                }
+            }
+            Err(SignalWireError::Unauthorized) => {
+                println!("Error: Unauthorized - Check your credentials");
+            }
+            Err(e) => {
+                eprintln!("Error: {:?}", e);
+                panic!("Unexpected error listing subprojects");
+            }
+        }
+    }
+
+    /// Test creating and deleting a subproject.
+    ///
+    /// This test creates a new subproject, verifies it, and then deletes it.
+    /// The test is disabled by default to prevent accidental subproject creation.
+    /// Set SIGNALWIRE_RUN_SUBPROJECT_TEST=true in your .env file to enable it.
+    #[tokio::test]
+    async fn test_create_and_delete_subproject() {
+        dotenv().ok();
+
+        if env::var("SIGNALWIRE_RUN_SUBPROJECT_TEST").unwrap_or_else(|_| "false".to_string()) != "true" {
+            println!("Skipping subproject creation/deletion test. To enable, set SIGNALWIRE_RUN_SUBPROJECT_TEST=true in your .env file.");
+            return;
+        }
+
+        let client = get_client_from_env();
+        let friendly_name = format!("Test Subproject {}", chrono::Utc::now().timestamp());
+
+        // Create a subproject
+        println!("Creating subproject with name: {}", friendly_name);
+        let subproject = match client.create_subproject(&friendly_name).await {
+            Ok(response) => {
+                println!("✓ Subproject created: SID={}, Name={}", response.sid, response.friendly_name);
+                assert_eq!(response.friendly_name, friendly_name, "Friendly name mismatch");
+                response
+            }
+            Err(SignalWireError::Unauthorized) => {
+                println!("Error: Unauthorized - Check your credentials");
+                return;
+            }
+            Err(e) => {
+                panic!("Error creating subproject: {:?}", e);
+            }
+        };
+
+        // Get the subproject details to verify it was created
+        match client.get_subproject(&subproject.sid).await {
+            Ok(response) => {
+                println!("✓ Subproject retrieved: SID={}, Name={}", response.sid, response.friendly_name);
+                assert_eq!(response.sid, subproject.sid, "SID mismatch");
+                assert_eq!(response.friendly_name, friendly_name, "Friendly name mismatch");
+            }
+            Err(e) => {
+                panic!("Error retrieving subproject: {:?}", e);
+            }
+        };
+
+        // Update the subproject
+        let updated_name = format!("{} - Updated", friendly_name);
+        match client.update_subproject(&subproject.sid, &updated_name, None).await {
+            Ok(response) => {
+                println!("✓ Subproject updated: SID={}, Name={}", response.sid, response.friendly_name);
+                assert_eq!(response.sid, subproject.sid, "SID mismatch");
+                assert_eq!(response.friendly_name, updated_name, "Updated friendly name mismatch");
+            }
+            Err(e) => {
+                panic!("Error updating subproject: {:?}", e);
+            }
+        };
+
+        // Delete the subproject
+        println!("Deleting subproject: SID={}", subproject.sid);
+        match client.delete_subproject(&subproject.sid).await {
+            Ok(()) => {
+                println!("✓ Subproject deleted successfully");
+            }
+            Err(e) => {
+                panic!("Error deleting subproject: {:?}", e);
+            }
+        };
+
+        // Verify the subproject was deleted
+        match client.get_subproject(&subproject.sid).await {
+            Err(SignalWireError::NotFound(_)) => {
+                println!("✓ Subproject no longer exists (as expected)");
+            }
+            Ok(_) => {
+                panic!("Subproject still exists after deletion");
+            }
+            Err(e) => {
+                println!("Unexpected error checking deleted subproject: {:?}", e);
+            }
+        };
+    }
+
+    /// Test retrieving phone numbers from a specific subproject.
+    ///
+    /// This test lists phone numbers owned by a subproject.
+    /// It requires an existing subproject with the SID specified in SIGNALWIRE_TEST_SUBPROJECT_SID env var.
+    #[tokio::test]
+    async fn test_get_subproject_phone_numbers() {
+        dotenv().ok();
+
+        // Skip the test if subproject SID is not provided
+        let subproject_sid = match env::var("SIGNALWIRE_TEST_SUBPROJECT_SID") {
+            Ok(sid) => sid,
+            Err(_) => {
+                println!("Skipping subproject phone numbers test. To enable, set SIGNALWIRE_TEST_SUBPROJECT_SID in your .env file.");
+                return;
+            }
+        };
+
+        let client = get_client_from_env();
+        let query_params = PhoneNumberOwnedFilterParams::new().build();
+
+        // First get info about the subproject
+        match client.get_subproject(&subproject_sid).await {
+            Ok(subproject) => {
+                println!("Testing phone numbers for subproject: {} ({})", subproject.friendly_name, subproject.sid);
+            }
+            Err(e) => {
+                println!("Error retrieving subproject details: {:?}", e);
+                println!("Make sure the SIGNALWIRE_TEST_SUBPROJECT_SID is correct and the subproject exists.");
+                return;
+            }
+        }
+
+        // Now get the phone numbers for this subproject
+        match client.get_subproject_phone_numbers(&subproject_sid, &query_params).await {
+            Ok(phone_numbers) => {
+                println!("Found {} phone number(s) in the subproject", phone_numbers.incoming_phone_numbers.len());
+
+                if phone_numbers.incoming_phone_numbers.is_empty() {
+                    println!("No phone numbers found in this subproject.");
+                } else {
+                    // Print some details about each phone number
+                    for (i, number) in phone_numbers.incoming_phone_numbers.iter().enumerate() {
+                        println!("Phone #{}: Number={}", i + 1, number.phone_number);
+                    }
+                }
+            }
+            Err(SignalWireError::NotFound(_)) => {
+                println!("Subproject not found or has no phone numbers.");
+            }
+            Err(e) => {
+                println!("Error retrieving subproject phone numbers: {:?}", e);
             }
         }
     }

@@ -326,3 +326,141 @@ impl std::fmt::Display for MessageStatus {
         }
     }
 }
+
+// Subproject (Account) related types
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SubprojectResponse {
+    pub sid: String,
+    pub friendly_name: String,
+    pub status: String,
+    pub auth_token: String,
+    pub date_created: String,
+    pub date_updated: String,
+    #[serde(rename = "type")]
+    pub account_type: Option<String>,
+    pub owner_account_sid: Option<String>,
+    pub uri: Option<String>,
+    pub subproject: Option<bool>,
+    pub signing_key: Option<String>,
+    pub subresource_uris: SubprojectResourceUris,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SubprojectResourceUris {
+    pub addresses: Option<String>,
+    pub available_phone_numbers: Option<String>,
+    pub applications: Option<String>,
+    pub authorized_connect_apps: Option<String>,
+    pub calls: Option<String>,
+    pub conferences: Option<String>,
+    pub connect_apps: Option<String>,
+    pub incoming_phone_numbers: Option<String>,
+    pub keys: Option<String>,
+    pub notifications: Option<String>,
+    pub outgoing_caller_ids: Option<String>,
+    pub queues: Option<String>,
+    pub recordings: Option<String>,
+    pub sandbox: Option<String>,
+    pub sip: Option<String>,
+    pub short_codes: Option<String>,
+    pub messages: Option<String>,
+    pub transcriptions: Option<String>,
+    pub usage: Option<String>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SubprojectsListResponse {
+    pub uri: Option<String>,
+    pub first_page_uri: String,
+    pub next_page_uri: Option<String>,
+    pub previous_page_uri: Option<String>,
+    pub page: Option<i32>,
+    pub page_size: Option<i32>,
+    pub accounts: Vec<SubprojectResponse>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CreateSubprojectRequest {
+    pub friendly_name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UpdateSubprojectRequest {
+    pub friendly_name: String,
+    pub status: Option<String>, // "active" or "suspended"
+}
+
+#[derive(Default)]
+pub struct SubprojectQueryParams {
+    params: Vec<(String, String)>,
+}
+
+impl SubprojectQueryParams {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn friendly_name(mut self, friendly_name: &str) -> Self {
+        self.params.push(("FriendlyName".to_string(), friendly_name.to_string()));
+        self
+    }
+
+    pub fn status(mut self, status: &str) -> Self {
+        self.params.push(("Status".to_string(), status.to_string()));
+        self
+    }
+
+    pub fn build(self) -> Vec<(String, String)> {
+        self.params
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SubprojectPhoneNumbersResponse {
+    pub uri: String,
+    pub first_page_uri: String,
+    pub next_page_uri: Option<String>,
+    pub previous_page_uri: Option<String>,
+    pub page: i32,
+    pub page_size: i32,
+    pub incoming_phone_numbers: Vec<SubprojectPhoneNumber>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SubprojectPhoneNumber {
+    pub sid: String,
+    pub account_sid: String,
+    pub friendly_name: String,
+    pub phone_number: String,
+    pub voice_url: Option<String>,
+    pub voice_method: Option<String>,
+    pub voice_fallback_url: Option<String>,
+    pub voice_fallback_method: Option<String>,
+    pub status_callback: Option<String>,
+    pub status_callback_method: Option<String>,
+    pub voice_caller_id_lookup: Option<bool>,
+    pub voice_application_sid: Option<String>,
+    pub date_created: String,
+    pub date_updated: String,
+    pub sms_url: Option<String>,
+    pub sms_method: Option<String>,
+    pub sms_fallback_url: Option<String>,
+    pub sms_fallback_method: Option<String>,
+    pub sms_application_sid: Option<String>,
+    pub capabilities: PhoneNumberCapabilities,
+    pub beta: bool,
+    pub uri: String,
+    pub trunk_sid: Option<String>,
+    pub emergency_status: Option<String>,
+    pub emergency_address_sid: Option<String>,
+    pub emergency_address_status: Option<String>,
+    pub status: Option<String>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PhoneNumberCapabilities {
+    pub voice: bool,
+    pub sms: bool,
+    pub mms: bool,
+    pub fax: bool,
+}

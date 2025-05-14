@@ -8,6 +8,7 @@ This library provides methods for authentication, phone number management, and m
 - 🔐  **Authenticate**: Obtain JWT tokens for secure API access.
 - 📞  **Phone Number Management**: Retrieve available and owned phone numbers.
 - 📱  **SMS Messaging**: Send SMS messages and check delivery status.
+- 🏢  **Subproject Management**: Create, list, update, and delete subprojects (accounts).
 - ⚡ **Asynchronous Support**: Built with async/await using Tokio.
 - 🕛 **Blocking Support**: Support for synchronous operations.
 
@@ -136,6 +137,63 @@ match client.get_message_status(message_sid).await {
 }
 ```
 
+### Manage Subprojects
+
+```rust
+// List subprojects
+let client = SignalWireClient::new(&space_name, &project_id, &api_key);
+let query_params = SubprojectQueryParams::new().build();
+
+match client.list_subprojects(&query_params).await {
+    Ok(response) => {
+        println!("Found {} subproject(s)", response.accounts.len());
+        
+        // Print details about each subproject
+        for account in response.accounts {
+            println!("SID: {}, Name: {}", account.sid, account.friendly_name);
+        }
+    },
+    Err(e) => eprintln!("Failed to list subprojects: {:?}", e),
+}
+
+// Create a new subproject
+let friendly_name = "My New Subproject";
+match client.create_subproject(friendly_name).await {
+    Ok(response) => {
+        println!("Subproject created with SID: {}", response.sid);
+        
+        // Store the SID for later use
+        let subproject_sid = response.sid;
+        
+        // Update the subproject
+        let updated_name = "Updated Subproject Name";
+        match client.update_subproject(&subproject_sid, updated_name, Some("active")).await {
+            Ok(updated) => println!("Subproject updated: {}", updated.friendly_name),
+            Err(e) => eprintln!("Failed to update subproject: {:?}", e),
+        }
+        
+        // List phone numbers belonging to this subproject
+        let query_params = PhoneNumberOwnedFilterParams::new().build();
+        match client.get_subproject_phone_numbers(&subproject_sid, &query_params).await {
+            Ok(numbers) => {
+                println!("Found {} phone number(s) in the subproject", numbers.incoming_phone_numbers.len());
+                for number in numbers.incoming_phone_numbers {
+                    println!("Number: {}", number.phone_number);
+                }
+            },
+            Err(e) => eprintln!("Failed to list subproject phone numbers: {:?}", e),
+        }
+        
+        // Delete the subproject
+        match client.delete_subproject(&subproject_sid).await {
+            Ok(_) => println!("Subproject deleted successfully"),
+            Err(e) => eprintln!("Failed to delete subproject: {:?}", e),
+        }
+    },
+    Err(e) => eprintln!("Failed to create subproject: {:?}", e),
+}
+```
+
 ## 📚 Usage (Blocking)
 
 With the `blocking` feature enabled, you can use synchronous versions of all methods:
@@ -167,6 +225,19 @@ fn main() -> Result<(), SignalWireError> {
     // Check message status (blocking)
     let status_response = client.get_message_status_blocking(&response.sid)?;
     println!("Message status: {}", status_response.get_status());
+    
+    // List subprojects (blocking)
+    let query_params = SubprojectQueryParams::new().build();
+    let subprojects = client.list_subprojects_blocking(&query_params)?;
+    println!("Found {} subprojects", subprojects.accounts.len());
+
+    // If we have a subproject, get its phone numbers
+    if !subprojects.accounts.is_empty() {
+        let subproject_sid = &subprojects.accounts[0].sid;
+        let phone_params = PhoneNumberOwnedFilterParams::new().build();
+        let numbers = client.get_subproject_phone_numbers_blocking(subproject_sid, &phone_params)?;
+        println!("Subproject has {} phone numbers", numbers.incoming_phone_numbers.len());
+    }
 
     Ok(())
 }
@@ -194,6 +265,12 @@ Contributions are welcome! Please open an issue or submit a pull request.
 For questions or feedback, reach out to chiarel@tragdate.ninja
 
 ## 📝 Changelog
+
+### 0.1.7
+- Added subproject (account) management
+- Added methods for creating, listing, updating, and deleting subprojects
+- Added support for managing phone numbers within subprojects
+- Added tests for the new functionality
 
 ### 0.1.6
 - Added SMS messaging functionality
