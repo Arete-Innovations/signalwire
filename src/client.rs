@@ -836,4 +836,210 @@ impl SignalWireClient {
     pub fn get_subproject_phone_numbers_blocking(&self, subproject_sid: &str, query_params: &[(String, String)]) -> Result<SubprojectPhoneNumbersResponse, SignalWireError> {
         tokio::runtime::Runtime::new().unwrap().block_on(self.get_subproject_phone_numbers(subproject_sid, query_params))
     }
+
+    // ---------- Phone Number Lookup & Validation Methods ----------
+
+    /// Looks up and validates a phone number.
+    ///
+    /// This method validates a phone number to ensure it is valid and properly formatted.
+    /// It returns basic information about the number such as country code and formatting.
+    ///
+    /// # Arguments
+    ///
+    /// * `phone_number` - The phone number to lookup and validate
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `PhoneLookupResponse` with information about the phone number if successful
+    /// - `SignalWireError` if the request fails
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    pub async fn lookup_phone_number(&self, phone_number: &str) -> Result<PhoneLookupResponse, SignalWireError> {
+        let url = format!("https://{}.signalwire.com/api/relay/rest/lookup/phone_number/{}", self.space_name, phone_number);
+
+        let response = self
+            .http_client
+            .get(&url)
+            .basic_auth(&self.project_id, Some(&self.api_key))
+            .send()
+            .await
+            .map_err(|e| SignalWireError::HttpError(e.to_string()))?;
+
+        let status = response.status();
+        let response_text = response.text().await.map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+
+        if status == reqwest::StatusCode::UNAUTHORIZED {
+            return Err(SignalWireError::Unauthorized);
+        } else if status.is_client_error() || status.is_server_error() {
+            return Err(SignalWireError::Unexpected(response_text));
+        }
+
+        let lookup_response: PhoneLookupResponse = serde_json::from_str(&response_text).map_err(|e| SignalWireError::Unexpected(format!("Failed to parse response: {}. Response was: {}", e, response_text)))?;
+
+        Ok(lookup_response)
+    }
+
+    /// Blocking version of `lookup_phone_number`.
+    ///
+    /// # Arguments
+    ///
+    /// * `phone_number` - The phone number to lookup and validate
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `PhoneLookupResponse` with information about the phone number if successful
+    /// - `SignalWireError` if the request fails
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `lookup_phone_number`.")]
+    #[cfg(feature = "blocking")]
+    pub fn lookup_phone_number_blocking(&self, phone_number: &str) -> Result<PhoneLookupResponse, SignalWireError> {
+        tokio::runtime::Runtime::new().unwrap().block_on(self.lookup_phone_number(phone_number))
+    }
+
+    /// Looks up a phone number with carrier information.
+    ///
+    /// This method validates a phone number and returns carrier information about the number,
+    /// including the carrier name and whether it's a mobile, landline, or VoIP number.
+    ///
+    /// # Arguments
+    ///
+    /// * `phone_number` - The phone number to lookup and validate
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `PhoneLookupResponse` with information about the phone number and carrier if successful
+    /// - `SignalWireError` if the request fails
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    pub async fn lookup_phone_number_with_carrier(&self, phone_number: &str) -> Result<PhoneLookupResponse, SignalWireError> {
+        let url = format!("https://{}.signalwire.com/api/relay/rest/lookup/phone_number/{}", self.space_name, phone_number);
+
+        let params = PhoneLookupParams::new().with_carrier().build();
+        let url = Url::parse_with_params(&url, &params).map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+
+        let response = self
+            .http_client
+            .get(url)
+            .basic_auth(&self.project_id, Some(&self.api_key))
+            .send()
+            .await
+            .map_err(|e| SignalWireError::HttpError(e.to_string()))?;
+
+        let status = response.status();
+        let response_text = response.text().await.map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+
+        if status == reqwest::StatusCode::UNAUTHORIZED {
+            return Err(SignalWireError::Unauthorized);
+        } else if status.is_client_error() || status.is_server_error() {
+            return Err(SignalWireError::Unexpected(response_text));
+        }
+
+        let lookup_response: PhoneLookupResponse = serde_json::from_str(&response_text).map_err(|e| SignalWireError::Unexpected(format!("Failed to parse response: {}. Response was: {}", e, response_text)))?;
+
+        Ok(lookup_response)
+    }
+
+    /// Blocking version of `lookup_phone_number_with_carrier`.
+    ///
+    /// # Arguments
+    ///
+    /// * `phone_number` - The phone number to lookup and validate
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `PhoneLookupResponse` with information about the phone number and carrier if successful
+    /// - `SignalWireError` if the request fails
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `lookup_phone_number_with_carrier`.")]
+    #[cfg(feature = "blocking")]
+    pub fn lookup_phone_number_with_carrier_blocking(&self, phone_number: &str) -> Result<PhoneLookupResponse, SignalWireError> {
+        tokio::runtime::Runtime::new().unwrap().block_on(self.lookup_phone_number_with_carrier(phone_number))
+    }
+
+    /// Looks up a phone number with caller name (CNAM) information.
+    ///
+    /// This method validates a phone number and returns caller name information,
+    /// which provides the registered name of the phone number owner if available.
+    ///
+    /// # Arguments
+    ///
+    /// * `phone_number` - The phone number to lookup and validate
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `PhoneLookupResponse` with information about the phone number and caller name if successful
+    /// - `SignalWireError` if the request fails
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    pub async fn lookup_phone_number_with_caller_name(&self, phone_number: &str) -> Result<PhoneLookupResponse, SignalWireError> {
+        let url = format!("https://{}.signalwire.com/api/relay/rest/lookup/phone_number/{}", self.space_name, phone_number);
+
+        let params = PhoneLookupParams::new().with_caller_name().build();
+        let url = Url::parse_with_params(&url, &params).map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+
+        let response = self
+            .http_client
+            .get(url)
+            .basic_auth(&self.project_id, Some(&self.api_key))
+            .send()
+            .await
+            .map_err(|e| SignalWireError::HttpError(e.to_string()))?;
+
+        let status = response.status();
+        let response_text = response.text().await.map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+
+        if status == reqwest::StatusCode::UNAUTHORIZED {
+            return Err(SignalWireError::Unauthorized);
+        } else if status.is_client_error() || status.is_server_error() {
+            return Err(SignalWireError::Unexpected(response_text));
+        }
+
+        let lookup_response: PhoneLookupResponse = serde_json::from_str(&response_text).map_err(|e| SignalWireError::Unexpected(format!("Failed to parse response: {}. Response was: {}", e, response_text)))?;
+
+        Ok(lookup_response)
+    }
+
+    /// Blocking version of `lookup_phone_number_with_caller_name`.
+    ///
+    /// # Arguments
+    ///
+    /// * `phone_number` - The phone number to lookup and validate
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `PhoneLookupResponse` with information about the phone number and caller name if successful
+    /// - `SignalWireError` if the request fails
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `lookup_phone_number_with_caller_name`.")]
+    #[cfg(feature = "blocking")]
+    pub fn lookup_phone_number_with_caller_name_blocking(&self, phone_number: &str) -> Result<PhoneLookupResponse, SignalWireError> {
+        tokio::runtime::Runtime::new().unwrap().block_on(self.lookup_phone_number_with_caller_name(phone_number))
+    }
 }

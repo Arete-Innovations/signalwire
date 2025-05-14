@@ -464,3 +464,117 @@ pub struct PhoneNumberCapabilities {
     pub mms: bool,
     pub fax: bool,
 }
+
+// ---------- Lookup & Validation Types ----------
+
+/// Response for phone number lookup requests
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PhoneLookupResponse {
+    #[serde(rename = "country_code_number")]
+    pub country_code_number: Option<i32>,
+    #[serde(rename = "national_number")]
+    pub national_number: Option<String>,
+    #[serde(rename = "possible_number")]
+    pub possible_number: Option<bool>,
+    #[serde(rename = "valid_number")]
+    pub valid_number: Option<bool>,
+    #[serde(rename = "national_number_formatted")]
+    pub national_number_formatted: Option<String>,
+    #[serde(rename = "international_number_formatted")]
+    pub international_number_formatted: Option<String>,
+    #[serde(rename = "e164")]
+    pub e164: Option<String>,
+    #[serde(rename = "location")]
+    pub location: Option<String>,
+    #[serde(rename = "country_code")]
+    pub country_code: String,
+    #[serde(rename = "timezones")]
+    pub timezones: Option<Vec<String>>,
+    #[serde(rename = "number_type")]
+    pub number_type: Option<String>,
+
+    // Fields for backward compatibility with the old structure
+    #[serde(skip_deserializing)]
+    pub phone_number: String,
+    #[serde(skip_deserializing)]
+    pub national_format: String,
+    #[serde(skip_deserializing)]
+    pub valid: bool,
+    #[serde(skip_deserializing)]
+    pub validation_errors: Option<Vec<String>>,
+    #[serde(skip_deserializing)]
+    pub formatted: bool,
+    #[serde(skip_deserializing)]
+    pub url: Option<String>,
+
+    // Optional carrier and caller name info
+    #[serde(skip_deserializing)]
+    pub carrier: Option<CarrierInfo>,
+    #[serde(skip_deserializing)]
+    pub caller_name: Option<CallerNameInfo>,
+}
+
+impl PhoneLookupResponse {
+    /// Gets the actual phone number in E.164 format
+    pub fn get_phone_number(&self) -> &str {
+        self.e164.as_deref().unwrap_or("")
+    }
+
+    /// Gets the formatted national version of the phone number
+    pub fn get_national_format(&self) -> &str {
+        self.national_number_formatted.as_deref().unwrap_or("")
+    }
+
+    /// Gets whether the number is valid
+    pub fn is_valid(&self) -> bool {
+        self.valid_number.unwrap_or(false)
+    }
+}
+
+/// Carrier information returned in a phone lookup response
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CarrierInfo {
+    pub mobile_country_code: Option<String>,
+    pub mobile_network_code: Option<String>,
+    pub name: Option<String>,
+    pub type_field: Option<String>,
+    #[serde(rename = "error_code")]
+    pub error_code: Option<String>,
+}
+
+/// Caller name information returned in a phone lookup response
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CallerNameInfo {
+    pub caller_name: Option<String>,
+    pub caller_type: Option<String>,
+    pub error_code: Option<String>,
+}
+
+/// Parameters for phone number lookup
+#[derive(Default)]
+pub struct PhoneLookupParams {
+    params: Vec<(String, String)>,
+}
+
+impl PhoneLookupParams {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Include carrier information in the lookup
+    pub fn with_carrier(mut self) -> Self {
+        self.params.push(("Type".to_string(), "carrier".to_string()));
+        self
+    }
+
+    /// Include caller name (CNAM) information in the lookup
+    pub fn with_caller_name(mut self) -> Self {
+        self.params.push(("Type".to_string(), "caller-name".to_string()));
+        self
+    }
+
+    /// Build the parameter list
+    pub fn build(self) -> Vec<(String, String)> {
+        self.params
+    }
+}

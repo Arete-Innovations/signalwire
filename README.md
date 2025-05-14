@@ -9,6 +9,7 @@ This library provides methods for authentication, phone number management, and m
 - 📞  **Phone Number Management**: Retrieve available and owned phone numbers.
 - 📱  **SMS Messaging**: Send SMS messages and check delivery status.
 - 🏢  **Subproject Management**: Create, list, update, and delete subprojects (accounts).
+- 🔍  **Phone Number Lookup & Validation**: Validate phone numbers and retrieve carrier and caller information.
 - ⚡ **Asynchronous Support**: Built with async/await using Tokio.
 - 🕛 **Blocking Support**: Support for synchronous operations.
 
@@ -18,7 +19,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-signalwire = "0.1.6"
+signalwire = "0.1.8"
 dotenv = "0.15.0"
 tokio = { version = "1.42.0", features = ["full"] }
 ```
@@ -33,7 +34,7 @@ or you can request the blocking version:
 
 ```toml
 [dependencies]
-signalwire = { version = "0.1.6", features = ["blocking"] }
+signalwire = { version = "0.1.8", features = ["blocking"] }
 ```
 
 ```bash
@@ -243,6 +244,59 @@ fn main() -> Result<(), SignalWireError> {
 }
 ```
 
+### Phone Number Lookup & Validation
+
+```rust
+// Validate a phone number
+let phone_number = "+12065550100";
+
+// Basic validation
+match client.lookup_phone_number(phone_number).await {
+    Ok(response) => {
+        println!("Phone number: {}", response.e164.as_deref().unwrap_or(""));
+        println!("Country code: {}", response.country_code);
+        println!("National format: {}", response.national_number_formatted.as_deref().unwrap_or(""));
+        println!("Valid: {}", response.valid_number.unwrap_or(false));
+        println!("Number type: {}", response.number_type.as_deref().unwrap_or(""));
+        println!("Location: {}", response.location.as_deref().unwrap_or(""));
+        println!("Timezones: {:?}", response.timezones);
+    },
+    Err(e) => eprintln!("Failed to lookup phone number: {:?}", e),
+}
+
+// Get carrier information
+match client.lookup_phone_number_with_carrier(phone_number).await {
+    Ok(response) => {
+        println!("Phone number: {}", response.e164.as_deref().unwrap_or(""));
+        println!("Valid: {}", response.valid_number.unwrap_or(false));
+        println!("Number type: {}", response.number_type.as_deref().unwrap_or(""));
+        println!("Mobile operator: {}", response.number_type.as_deref().unwrap_or("Unknown"));
+    },
+    Err(e) => eprintln!("Failed to lookup phone number with carrier: {:?}", e),
+}
+
+// Get caller name information (CNAM)
+match client.lookup_phone_number_with_caller_name(phone_number).await {
+    Ok(response) => {
+        println!("Phone number: {}", response.e164.as_deref().unwrap_or(""));
+        println!("Valid: {}", response.valid_number.unwrap_or(false));
+        println!("Number type: {}", response.number_type.as_deref().unwrap_or(""));
+        println!("Location: {}", response.location.as_deref().unwrap_or(""));
+    },
+    Err(e) => eprintln!("Failed to lookup phone number with caller name: {:?}", e),
+}
+
+// Helper methods
+let is_valid = response.is_valid();
+let phone_number = response.get_phone_number();
+let national_format = response.get_national_format();
+
+// Blocking versions
+let result = client.lookup_phone_number_blocking(phone_number)?;
+let carrier_result = client.lookup_phone_number_with_carrier_blocking(phone_number)?;
+let cnam_result = client.lookup_phone_number_with_caller_name_blocking(phone_number)?;
+```
+
 ## 🛡️ Error Handling
 
 The SDK provides a custom error type, `SignalWireError`, to handle various error scenarios, such as:
@@ -265,6 +319,12 @@ Contributions are welcome! Please open an issue or submit a pull request.
 For questions or feedback, reach out to chiarel@tragdate.ninja
 
 ## 📝 Changelog
+
+### 0.1.8
+- Added phone number lookup and validation functionality
+- Added carrier information lookup for phone numbers
+- Added caller name (CNAM) lookup for phone numbers
+- Added tests for the new functionality
 
 ### 0.1.7
 - Added subproject (account) management

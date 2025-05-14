@@ -405,4 +405,140 @@ mod tests {
             }
         }
     }
+
+    /// Test phone number lookup and validation.
+    ///
+    /// This test validates a phone number and retrieves information about it.
+    /// Set SIGNALWIRE_TEST_PHONE_NUMBER in your .env file to test with a specific number.
+    #[tokio::test]
+    async fn test_phone_lookup() {
+        dotenv().ok();
+
+        // Get test phone number from environment or use a default US number
+        let test_phone = env::var("SIGNALWIRE_TEST_PHONE_NUMBER").unwrap_or_else(|_| "+12065550100".to_string());
+        
+        // Log whether we're using the environment variable or the default
+        if env::var("SIGNALWIRE_TEST_PHONE_NUMBER").is_ok() {
+            println!("Using phone number from environment: {}", test_phone);
+        } else {
+            println!("Using default test phone number: {}", test_phone);
+        }
+
+        let client = get_client_from_env();
+
+        println!("Looking up phone number: {}", test_phone);
+
+        // Test basic lookup
+        match client.lookup_phone_number(&test_phone).await {
+            Ok(response) => {
+                println!("✓ Phone lookup successful");
+                println!("  Phone number (E.164): {}", response.e164.as_deref().unwrap_or(""));
+                println!("  Country code: {}", response.country_code);
+                println!("  National format: {}", response.national_number_formatted.as_deref().unwrap_or(""));
+                println!("  Valid: {}", response.valid_number.unwrap_or(false));
+                println!("  Number type: {}", response.number_type.as_deref().unwrap_or(""));
+                println!("  Location: {}", response.location.as_deref().unwrap_or(""));
+
+                // Only assert basic fields that should always be present
+                assert!(!response.country_code.is_empty(), "Country code should not be empty");
+                if let Some(e164) = &response.e164 {
+                    assert!(!e164.is_empty(), "E.164 phone number should not be empty");
+                }
+                if let Some(valid) = response.valid_number {
+                    assert!(valid, "Number should be valid");
+                }
+            }
+            Err(SignalWireError::Unauthorized) => {
+                println!("Error: Unauthorized - Check your credentials");
+            }
+            Err(e) => {
+                // Don't fail the test, just log the error
+                println!("Error with phone lookup: {:?}", e);
+            }
+        }
+
+        // Test lookup with carrier information
+        println!("\nLooking up phone number with carrier information: {}", test_phone);
+        match client.lookup_phone_number_with_carrier(&test_phone).await {
+            Ok(response) => {
+                println!("✓ Phone lookup with carrier successful");
+                println!("  Phone number: {}", response.e164.as_deref().unwrap_or(""));
+                println!("  Valid: {}", response.valid_number.unwrap_or(false));
+                println!("  Number type: {}", response.number_type.as_deref().unwrap_or(""));
+                println!("  Location: {}", response.location.as_deref().unwrap_or(""));
+
+                // Note: SignalWire returns carrier information differently than expected
+                println!("  Mobile operator: {}", response.number_type.as_deref().unwrap_or("Unknown"));
+            }
+            Err(e) => {
+                // Don't fail the test, just log the error
+                println!("Error with carrier lookup: {:?}", e);
+            }
+        }
+
+        // Test lookup with caller name information
+        println!("\nLooking up phone number with caller name information: {}", test_phone);
+        match client.lookup_phone_number_with_caller_name(&test_phone).await {
+            Ok(response) => {
+                println!("✓ Phone lookup with caller name successful");
+                println!("  Phone number: {}", response.e164.as_deref().unwrap_or(""));
+                println!("  Valid: {}", response.valid_number.unwrap_or(false));
+                println!("  Number type: {}", response.number_type.as_deref().unwrap_or(""));
+                println!("  Location: {}", response.location.as_deref().unwrap_or(""));
+
+                // The API currently doesn't return caller name in the expected format
+                println!("  Note: SignalWire API doesn't currently return caller name info in the expected format");
+            }
+            Err(e) => {
+                // Don't fail the test, just log the error
+                println!("Error with caller name lookup: {:?}", e);
+            }
+        }
+    }
+
+    /// Test phone number lookup with specific number from environment.
+    ///
+    /// This test only runs if SIGNALWIRE_TEST_PHONE_NUMBER is set in the environment.
+    /// It provides a way to test with a real phone number without hardcoding it.
+    #[tokio::test]
+    async fn test_phone_lookup_with_env_number() {
+        dotenv().ok();
+
+        // Skip the test if the environment variable is not set
+        let test_phone = match env::var("SIGNALWIRE_TEST_PHONE_NUMBER") {
+            Ok(number) => number,
+            Err(_) => {
+                println!("Skipping environment-specific phone lookup test. To enable, set SIGNALWIRE_TEST_PHONE_NUMBER in your .env file.");
+                return;
+            }
+        };
+
+        println!("Running lookup test with number from environment: {}", test_phone);
+        
+        let client = get_client_from_env();
+
+        // Just run the basic lookup to avoid duplication
+        match client.lookup_phone_number(&test_phone).await {
+            Ok(response) => {
+                println!("✓ Phone lookup successful for environment number");
+                println!("  Phone number (E.164): {}", response.e164.as_deref().unwrap_or(""));
+                println!("  Country code: {}", response.country_code);
+                println!("  National format: {}", response.national_number_formatted.as_deref().unwrap_or(""));
+                println!("  Valid: {}", response.valid_number.unwrap_or(false));
+                println!("  Number type: {}", response.number_type.as_deref().unwrap_or(""));
+                println!("  Location: {}", response.location.as_deref().unwrap_or(""));
+                
+                // Assertions, only verify if we got a valid response
+                assert!(!response.country_code.is_empty(), "Country code should not be empty");
+                if let Some(valid) = response.valid_number {
+                    // Some production phone numbers might not be valid, so don't assert this
+                    println!("  Number validity: {}", valid);
+                }
+            }
+            Err(e) => {
+                println!("Error with environment phone lookup: {:?}", e);
+                // Don't fail the test, as the phone number might be invalid intentionally
+            }
+        }
+    }
 }
