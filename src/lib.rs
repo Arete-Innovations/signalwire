@@ -406,6 +406,57 @@ mod tests {
         }
     }
 
+    /// Test updating a phone number's configuration.
+    ///
+    /// This test is disabled by default to avoid accidental changes.
+    /// To enable it, set the following in your .env file:
+    ///
+    /// SIGNALWIRE_RUN_UPDATE_PHONE_TEST=true
+    /// SIGNALWIRE_TEST_PHONE_ID=your_phone_number_id
+    #[tokio::test]
+    async fn test_update_phone_number() {
+        dotenv().ok();
+
+        if env::var("SIGNALWIRE_RUN_UPDATE_PHONE_TEST").unwrap_or_else(|_| "false".to_string()) != "true" {
+            println!("Skipping phone number update test. To enable, set SIGNALWIRE_RUN_UPDATE_PHONE_TEST=true in your .env file.");
+            return;
+        }
+
+        let phone_id = match env::var("SIGNALWIRE_TEST_PHONE_ID") {
+            Ok(id) => id,
+            Err(_) => {
+                println!("Skipping phone number update test. To enable, set SIGNALWIRE_TEST_PHONE_ID in your .env file.");
+                return;
+            }
+        };
+
+        let client = get_client_from_env();
+
+        let update_request = UpdatePhoneNumberRequest {
+            name: Some("Jenny".to_string()),
+            call_handler: Some("relay_context".to_string()),
+            call_receive_mode: Some("voice".to_string()),
+            call_relay_topic: Some("office".to_string()),
+            message_handler: Some("relay_application".to_string()),
+            message_relay_topic: Some("my_relay_app".to_string()),
+            message_relay_application: Some("my_relay_app".to_string()),
+            ..Default::default()
+        };
+
+        match client.update_phone_number(&phone_id, &update_request).await {
+            Ok(response) => {
+                println!("✓ Phone number updated: id={}, number={}", response.id, response.number);
+                assert_eq!(response.id, phone_id, "Updated phone ID mismatch");
+            }
+            Err(SignalWireError::Unauthorized) => {
+                println!("Error: Unauthorized - Check your credentials");
+            }
+            Err(e) => {
+                panic!("Unexpected error updating phone number: {:?}", e);
+            }
+        }
+    }
+
     /// Test phone number lookup and validation.
     ///
     /// This test validates a phone number and retrieves information about it.

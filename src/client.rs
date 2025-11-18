@@ -252,6 +252,54 @@ impl SignalWireClient {
         Ok(buy_phone_number_response)
     }
 
+    /// Updates an existing phone number's configuration.
+    ///
+    /// This corresponds to:
+    /// PUT /api/relay/rest/phone_numbers/:id
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the phone number to update.
+    /// * `request` - The new configuration for the phone number.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `BuyPhoneNumberResponse` with the updated phone number info if successful.
+    /// - `SignalWireError` if the request fails or is unauthorized.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    pub async fn update_phone_number(&self, id: &str, request: &UpdatePhoneNumberRequest) -> Result<BuyPhoneNumberResponse, SignalWireError> {
+        let url = format!("https://{}.signalwire.com/api/relay/rest/phone_numbers/{}", self.space_name, id);
+
+        let response = self
+            .http_client
+            .put(&url)
+            .basic_auth(&self.project_id, Some(&self.api_key))
+            .header("Accept", "application/json")
+            .json(request)
+            .send()
+            .await
+            .map_err(|e| SignalWireError::HttpError(e.to_string()))?;
+
+        let status = response.status();
+        let response_text = response.text().await.map_err(|e| SignalWireError::Unexpected(e.to_string()))?;
+
+        if status == reqwest::StatusCode::UNAUTHORIZED {
+            return Err(SignalWireError::Unauthorized);
+        } else if status.is_client_error() || status.is_server_error() {
+            return Err(SignalWireError::Unexpected(response_text));
+        }
+
+        let phone_number_response: BuyPhoneNumberResponse =
+            serde_json::from_str(&response_text).map_err(|e| SignalWireError::Unexpected(format!("Failed to parse response: {}. Response was: {}", e, response_text)))?;
+
+        Ok(phone_number_response)
+    }
+
     /// Blocking version of `buy_phone_number`.
     ///
     /// # Arguments
@@ -273,6 +321,29 @@ impl SignalWireClient {
     #[cfg(feature = "blocking")]
     pub fn buy_phone_number_blocking(&self, phone_number: &str) -> Result<BuyPhoneNumberResponse, SignalWireError> {
         tokio::runtime::Runtime::new().unwrap().block_on(self.buy_phone_number(phone_number))
+    }
+
+    /// Blocking version of `update_phone_number`.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID of the phone number to update.
+    /// * `request` - The new configuration for the phone number.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing either:
+    /// - `BuyPhoneNumberResponse` with the updated phone number info if successful.
+    /// - `SignalWireError` if the request fails or is unauthorized.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SignalWireError::Unauthorized` if authentication fails.
+    /// Other `SignalWireError` variants may be returned for unexpected issues.
+    #[cfg_attr(feature = "blocking", doc = "Blocking version of `update_phone_number`.")]
+    #[cfg(feature = "blocking")]
+    pub fn update_phone_number_blocking(&self, id: &str, request: &UpdatePhoneNumberRequest) -> Result<BuyPhoneNumberResponse, SignalWireError> {
+        tokio::runtime::Runtime::new().unwrap().block_on(self.update_phone_number(id, request))
     }
 
     /// Sends an SMS message using the SignalWire API.
